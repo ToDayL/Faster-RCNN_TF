@@ -479,7 +479,7 @@ class pascal_voc(datasets.imdb):
             filename = os.path.join(self._pascal_path, 'region_proposals',  prefix, index + '.txt')
             assert os.path.exists(filename), \
                 'RPN data not found at: {}'.format(filename)
-            raw_data = np.loadtxt(filename, dtype=float)
+            raw_data = np.loadtxt(filename, dtype=float, encoding='latin1')
             if len(raw_data.shape) == 1:
                 if raw_data.size == 0:
                     raw_data = raw_data.reshape((0, 5))

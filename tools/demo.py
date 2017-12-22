@@ -19,9 +19,9 @@ CLASSES = ('__background__',
            'sheep', 'sofa', 'train', 'tvmonitor')
 
 
-#CLASSES = ('__background__','person','bike','motorbike','car','bus')
+# CLASSES = ('__background__','person','bike','motorbike','car','bus')
 
-def vis_detections(im, class_name, dets,ax, thresh=0.5):
+def vis_detections(im, class_name, dets, ax, thresh=0.5):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
@@ -45,7 +45,7 @@ def vis_detections(im, class_name, dets,ax, thresh=0.5):
     ax.set_title(('{} detections with '
                   'p({} | box) >= {:.1f}').format(class_name, class_name,
                                                   thresh),
-                  fontsize=14)
+                 fontsize=14)
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
@@ -56,7 +56,7 @@ def demo(sess, net, image_name):
 
     # Load the demo image
     im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
-    #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
+    # im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
     im = cv2.imread(im_file)
 
     # Detect all object classes and regress object bounds
@@ -64,8 +64,7 @@ def demo(sess, net, image_name):
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
-    print ('Detection took {:.3f}s for '
-           '{:d} object proposals').format(timer.total_time, boxes.shape[0])
+    print('Detection took {:.3f}s for {:d} object proposals'.format(timer.total_time, boxes.shape[0]))
 
     # Visualize detections for each class
     im = im[:, :, (2, 1, 0)]
@@ -107,7 +106,7 @@ if __name__ == '__main__':
 
     if args.model == ' ':
         raise IOError(('Error: Model not found.\n'))
-        
+
     # init session
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
@@ -115,23 +114,22 @@ if __name__ == '__main__':
     # load model
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
     saver.restore(sess, args.model)
-   
-    #sess.run(tf.initialize_all_variables())
 
-    print '\n\nLoaded network {:s}'.format(args.model)
+    # sess.run(tf.initialize_all_variables())
+
+    print('\n\nLoaded network {0:s}'.format(args.model))
 
     # Warmup on a dummy image
     im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
-    for i in xrange(2):
-        _, _= im_detect(sess, net, im)
+    for i in range(2):
+        _, _ = im_detect(sess, net, im)
 
     im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']
 
-
     for im_name in im_names:
-        print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-        print 'Demo for data/demo/{}'.format(im_name)
+        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        print('Demo for data/demo/{}'.format(im_name))
         demo(sess, net, im_name)
 
     plt.show()

@@ -15,7 +15,8 @@ import pdb
 
 DEBUG = False
 
-def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
+
+def proposal_target_layer(rpn_rois, gt_boxes, _num_classes):
     """
     Assign object detection proposals to ground-truth targets. Produces proposal
     classification labels and bounding-box regression targets.
@@ -35,10 +36,10 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
 
     # Sanity check: single batch only
     assert np.all(all_rois[:, 0] == 0), \
-            'Only single item batches are supported'
+        'Only single item batches are supported'
 
     num_images = 1
-    rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
+    rois_per_image = int(cfg.TRAIN.BATCH_SIZE / num_images)
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
 
     # Sample rois with classification labels and bounding box regression
@@ -48,23 +49,23 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
         rois_per_image, _num_classes)
 
     if DEBUG:
-        print 'num fg: {}'.format((labels > 0).sum())
-        print 'num bg: {}'.format((labels == 0).sum())
+        print('num fg: {}'.format((labels > 0).sum()))
+        print('num bg: {}'.format((labels == 0).sum()))
         _count += 1
         _fg_num += (labels > 0).sum()
         _bg_num += (labels == 0).sum()
-        print 'num fg avg: {}'.format(_fg_num / _count)
-        print 'num bg avg: {}'.format(_bg_num / _count)
-        print 'ratio: {:.3f}'.format(float(_fg_num) / float(_bg_num))
+        print('num fg avg: {}'.format(_fg_num / _count))
+        print('num bg avg: {}'.format(_bg_num / _count))
+        print('ratio: {:.3f}'.format(float(_fg_num) / float(_bg_num)))
 
-    rois = rois.reshape(-1,5)
-    labels = labels.reshape(-1,1)
-    bbox_targets = bbox_targets.reshape(-1,_num_classes*4)
-    bbox_inside_weights = bbox_inside_weights.reshape(-1,_num_classes*4)
+    rois = rois.reshape(-1, 5)
+    labels = labels.reshape(-1, 1)
+    bbox_targets = bbox_targets.reshape(-1, _num_classes*4)
+    bbox_inside_weights = bbox_inside_weights.reshape(-1, _num_classes*4)
 
     bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
 
-    return rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights
+    return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
@@ -78,7 +79,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_inside_weights (ndarray): N x 4K blob of loss weights
     """
 
-    clss = np.array(bbox_target_data[:, 0], dtype=np.uint16, copy=True)
+    clss = np.array(bbox_target_data[:, 0], dtype=np.int32, copy=True)
     bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
     bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]
@@ -117,7 +118,6 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     gt_assignment = overlaps.argmax(axis=1)
     max_overlaps = overlaps.max(axis=1)
     labels = gt_boxes[gt_assignment, 4]
-
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(max_overlaps >= cfg.TRAIN.FG_THRESH)[0]
     # Guard against the case when an image has fewer than fg_rois_per_image
@@ -126,7 +126,6 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # Sample foreground regions without replacement
     if fg_inds.size > 0:
         fg_inds = npr.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
-
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
     bg_inds = np.where((max_overlaps < cfg.TRAIN.BG_THRESH_HI) &
                        (max_overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
@@ -136,8 +135,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     bg_rois_per_this_image = min(bg_rois_per_this_image, bg_inds.size)
     # Sample background regions without replacement
     if bg_inds.size > 0:
-        bg_inds = npr.choice(bg_inds, size=bg_rois_per_this_image, replace=False)
-
+        bg_inds = npr.choice(bg_inds, size=(bg_rois_per_this_image), replace=False)
     # The indices that we're selecting (both fg and bg)
     keep_inds = np.append(fg_inds, bg_inds)
     # Select sampled values from various arrays:
@@ -151,5 +149,5 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
 
     bbox_targets, bbox_inside_weights = \
         _get_bbox_regression_labels(bbox_target_data, num_classes)
-
+    
     return labels, rois, bbox_targets, bbox_inside_weights

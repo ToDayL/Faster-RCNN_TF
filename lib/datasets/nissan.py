@@ -10,7 +10,7 @@ import scipy.sparse
 from utils.cython_bbox import bbox_overlaps
 from utils.boxes_grid import get_boxes_grid
 import subprocess
-import cPickle
+import pickle
 from fast_rcnn.config import cfg
 import math
 from rpn_msr.generate_anchors import generate_anchors
@@ -23,7 +23,7 @@ class nissan(datasets.imdb):
                             else nissan_path
         self._data_path = os.path.join(self._nissan_path, 'Images')
         self._classes = ('__background__', 'Car', 'Pedestrian', 'Cyclist')
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        self._class_to_ind = dict(zip(self.classes, range(self.num_classes)))
         self._image_ext = '.png'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
@@ -117,19 +117,20 @@ class nissan(datasets.imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} roidb loaded from {}'.format(self.name, cache_file)
+                roidb = pickle.load(fid)
+            print('{} roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
-        print 'Loading region proposal network boxes...'
+        print('Loading region proposal network boxes...')
         model = cfg.REGION_PROPOSAL
         roidb = self._load_rpn_roidb(None, model)
-        print 'Region proposal network boxes loaded'
-        print '{} region proposals per image'.format(self._num_boxes_proposal / len(self.image_index))
+        print('Region proposal network boxes loaded')
+        print('{} region proposals per image'.format(self._num_boxes_proposal /
+                                                     len(self.image_index)))
 
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote roidb to {}'.format(cache_file)
+            pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -142,7 +143,7 @@ class nissan(datasets.imdb):
             filename = os.path.join(self._nissan_path, 'region_proposals',  prefix, self._image_set, index + '.txt')
             assert os.path.exists(filename), \
                 'RPN data not found at: {}'.format(filename)
-            raw_data = np.loadtxt(filename, dtype=float)
+            raw_data = np.loadtxt(filename, dtype=float, encoding='latin1')
             if len(raw_data.shape) == 1:
                 if raw_data.size == 0:
                     raw_data = raw_data.reshape((0, 5))
@@ -177,7 +178,7 @@ class nissan(datasets.imdb):
         # for each image
         for im_ind, index in enumerate(self.image_index):
             filename = os.path.join(output_dir, index + '.txt')
-            print 'Writing NISSAN results to file ' + filename
+            print('Writing NISSAN results to file ' + filename)
             with open(filename, 'wt') as f:
                 # for each class
                 for cls_ind, cls in enumerate(self.classes):
@@ -186,7 +187,7 @@ class nissan(datasets.imdb):
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
                         continue
-                    for k in xrange(dets.shape[0]):
+                    for k in range(dets.shape[0]):
                         subcls = int(dets[k, 5])
                         cls_name = self.classes[self.subclass_mapping[subcls]]
                         assert (cls_name == cls), 'subclass not in class'
@@ -198,7 +199,7 @@ class nissan(datasets.imdb):
     def evaluate_detections_one_file(self, all_boxes, output_dir):
         # open results file
         filename = os.path.join(output_dir, 'detections.txt')
-        print 'Writing all NISSAN results to file ' + filename
+        print('Writing all NISSAN results to file ' + filename)
         with open(filename, 'wt') as f:
             # for each image
             for im_ind, index in enumerate(self.image_index):
@@ -209,7 +210,7 @@ class nissan(datasets.imdb):
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
                         continue
-                    for k in xrange(dets.shape[0]):
+                    for k in range(dets.shape[0]):
                         subcls = int(dets[k, 5])
                         cls_name = self.classes[self.subclass_mapping[subcls]]
                         assert (cls_name == cls), 'subclass not in class'
@@ -220,7 +221,7 @@ class nissan(datasets.imdb):
         # for each image
         for im_ind, index in enumerate(self.image_index):
             filename = os.path.join(output_dir, index + '.txt')
-            print 'Writing NISSAN results to file ' + filename
+            print('Writing NISSAN results to file ' + filename)
             with open(filename, 'wt') as f:
                 # for each class
                 for cls_ind, cls in enumerate(self.classes):
@@ -229,7 +230,7 @@ class nissan(datasets.imdb):
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
                         continue
-                    for k in xrange(dets.shape[0]):
+                    for k in range(dets.shape[0]):
                         f.write('{:f} {:f} {:f} {:f} {:.32f}\n'.format(\
                                  dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3], dets[k, 4]))
 
@@ -237,12 +238,12 @@ class nissan(datasets.imdb):
         # for each image
         for im_ind, index in enumerate(self.image_index):
             filename = os.path.join(output_dir, index + '.txt')
-            print 'Writing NISSAN results to file ' + filename
+            print('Writing NISSAN results to file ' + filename)
             with open(filename, 'wt') as f:
                 dets = all_boxes[im_ind]
                 if dets == []:
                     continue
-                for k in xrange(dets.shape[0]):
+                for k in range(dets.shape[0]):
                     f.write('{:f} {:f} {:f} {:f} {:.32f}\n'.format(dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3], dets[k, 4]))
 
 

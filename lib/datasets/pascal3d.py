@@ -15,7 +15,7 @@ import numpy as np
 import scipy.sparse
 import scipy.io as sio
 import utils.cython_bbox
-import cPickle
+import pickle
 import subprocess
 from utils.cython_bbox import bbox_overlaps
 from utils.boxes_grid import get_boxes_grid
@@ -24,8 +24,9 @@ import math
 from rpn_msr.generate_anchors import generate_anchors
 import sys
 
+
 class pascal3d(datasets.imdb):
-    def __init__(self, image_set, pascal3d_path = None):
+    def __init__(self, image_set, pascal3d_path=None):
         datasets.imdb.__init__(self, 'pascal3d_' + image_set)
         self._year = '2012'
         self._image_set = image_set
@@ -126,8 +127,8 @@ class pascal3d(datasets.imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_' + cfg.SUBCLS_NAME + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+                roidb = pickle.load(fid)
+            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_pascal3d_voxel_exemplar_annotation(index)
@@ -136,13 +137,13 @@ class pascal3d(datasets.imdb):
         if cfg.IS_RPN:
             # print out recall
             for i in xrange(1, self.num_classes):
-                print '{}: Total number of boxes {:d}'.format(self.classes[i], self._num_boxes_all[i])
-                print '{}: Number of boxes covered {:d}'.format(self.classes[i], self._num_boxes_covered[i])
-                print '{}: Recall {:f}'.format(self.classes[i], float(self._num_boxes_covered[i]) / float(self._num_boxes_all[i]))
+                print('{}: Total number of boxes {:d}'.format(self.classes[i], self._num_boxes_all[i]))
+                print('{}: Number of boxes covered {:d}'.format(self.classes[i], self._num_boxes_covered[i]))
+                print('{}: Recall {:f}'.format(self.classes[i], float(self._num_boxes_covered[i]) / float(self._num_boxes_all[i])))
 
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
 
@@ -452,29 +453,30 @@ class pascal3d(datasets.imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} roidb loaded from {}'.format(self.name, cache_file)
+                roidb = pickle.load(fid)
+            print('{} roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         if self._image_set != 'test':
             gt_roidb = self.gt_roidb()
 
-            print 'Loading region proposal network boxes...'
+            print('Loading region proposal network boxes...')
             model = cfg.REGION_PROPOSAL
             rpn_roidb = self._load_rpn_roidb(gt_roidb, model)
-            print 'Region proposal network boxes loaded'
+            print('Region proposal network boxes loaded')
             roidb = datasets.imdb.merge_roidbs(rpn_roidb, gt_roidb)
         else:
-            print 'Loading region proposal network boxes...'
+            print('Loading region proposal network boxes...')
             model = cfg.REGION_PROPOSAL
             roidb = self._load_rpn_roidb(None, model)
-            print 'Region proposal network boxes loaded'
+            print('Region proposal network boxes loaded')
 
-        print '{} region proposals per image'.format(self._num_boxes_proposal / len(self.image_index))
+        print('{} region proposals per image'.format(self._num_boxes_proposal /
+                                                     len(self.image_index)))
 
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote roidb to {}'.format(cache_file)
+            pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -492,7 +494,7 @@ class pascal3d(datasets.imdb):
             filename = os.path.join(self._pascal3d_path, 'region_proposals',  prefix, index + '.txt')
             assert os.path.exists(filename), \
                 'RPN data not found at: {}'.format(filename)
-            raw_data = np.loadtxt(filename, dtype=float)
+            raw_data = np.loadtxt(filename, dtype=float, encoding='latin1')
             if len(raw_data.shape) == 1:
                 if raw_data.size == 0:
                     raw_data = raw_data.reshape((0, 5))
@@ -524,8 +526,8 @@ class pascal3d(datasets.imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                roidb = pickle.load(fid)
+            print('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         if int(self._year) == 2007 or self._image_set != 'test':
@@ -535,8 +537,8 @@ class pascal3d(datasets.imdb):
         else:
             roidb = self._load_selective_search_roidb(None)
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+            pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -567,16 +569,16 @@ class pascal3d(datasets.imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                roidb = pickle.load(fid)
+            print('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = self.gt_roidb()
         ss_roidb = self._load_selective_search_IJCV_roidb(gt_roidb)
         roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+            pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -613,9 +615,9 @@ class pascal3d(datasets.imdb):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print 'Writing {} VOC results file'.format(cls)
+            print('Writing {} VOC results file'.format(cls))
             filename = os.path.join(output_dir, 'det_' + self._image_set + '_' + cls + '.txt')
-            print filename
+            print(filename)
 
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
@@ -637,7 +639,7 @@ class pascal3d(datasets.imdb):
     def evaluate_detections_one_file(self, all_boxes, output_dir):
         # open results file
         filename = os.path.join(output_dir, 'detections.txt')
-        print 'Writing all PASCAL3D results to file ' + filename
+        print('Writing all PASCAL3D results to file ' + filename)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(self.image_index):
                 for cls_ind, cls in enumerate(self.classes):
@@ -660,7 +662,7 @@ class pascal3d(datasets.imdb):
         # for each image
         for im_ind, index in enumerate(self.image_index):
             filename = os.path.join(output_dir, index + '.txt')
-            print 'Writing PASCAL results to file ' + filename
+            print('Writing PASCAL results to file ' + filename)
             with open(filename, 'wt') as f:
                 # for each class
                 for cls_ind, cls in enumerate(self.classes):
@@ -677,7 +679,7 @@ class pascal3d(datasets.imdb):
         # for each image
         for im_ind, index in enumerate(self.image_index):
             filename = os.path.join(output_dir, index + '.txt')
-            print 'Writing PASCAL results to file ' + filename
+            print('Writing PASCAL results to file ' + filename)
             with open(filename, 'wt') as f:
                 dets = all_boxes[im_ind]
                 if dets == []:

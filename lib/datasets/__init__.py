@@ -23,9 +23,11 @@ ROOT_DIR = osp.join(osp.dirname(__file__), '..', '..')
 # you could change this file.
 MATLAB = 'matlab_r2013b'
 
+
 # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
 def _which(program):
     import os
+    
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 

@@ -15,7 +15,7 @@ class VGGnet_train(Network):
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self.keep_prob = tf.placeholder(tf.float32)
-        self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
+        self.layers = dict({'data': self.data, 'im_info': self.im_info, 'gt_boxes': self.gt_boxes})
         self.trainable = trainable
         self.setup()
 
@@ -64,17 +64,17 @@ class VGGnet_train(Network):
 
         #========= RoI Proposal ============
         (self.feed('rpn_cls_score')
-             .reshape_layer(2,name = 'rpn_cls_score_reshape')
+             .reshape_layer(2, name='rpn_cls_score_reshape')
              .softmax(name='rpn_cls_prob'))
 
         (self.feed('rpn_cls_prob')
-             .reshape_layer(len(anchor_scales)*3*2,name = 'rpn_cls_prob_reshape'))
+             .reshape_layer(len(anchor_scales)*3*2, name='rpn_cls_prob_reshape'))
 
-        (self.feed('rpn_cls_prob_reshape','rpn_bbox_pred','im_info')
-             .proposal_layer(_feat_stride, anchor_scales, 'TRAIN',name = 'rpn_rois'))
+        (self.feed('rpn_cls_prob_reshape', 'rpn_bbox_pred','im_info')
+             .proposal_layer(_feat_stride, anchor_scales, 'TRAIN', name='rpn_rois'))
 
-        (self.feed('rpn_rois','gt_boxes')
-             .proposal_target_layer(n_classes,name = 'roi-data'))
+        (self.feed('rpn_rois', 'gt_boxes')
+             .proposal_target_layer(int(n_classes), name='roi-data'))
 
 
         #========= RCNN ============
