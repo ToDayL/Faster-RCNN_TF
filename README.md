@@ -3,6 +3,19 @@
 This is an experimental Tensorflow implementation of Faster RCNN - a convnet for object detection with a region proposal network.
 For details about R-CNN please refer to the paper [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](http://arxiv.org/pdf/1506.01497v3.pdf) by Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun.
 
+The original implementation uses python2 rather than python3. This branch change all code to python3 and make changes to let the code running on Tensorflow 1.4.1.
+The changes are only tested on VOC 2007 dataset, which runs well. To run code on Coco, maybe more changes should be made.
+To test on VOC 2007 dataset, just follow the instructions below and enjoy.
+
+The only thing you need to take care is the GPU-arch setting in ```lib/make.sh```. I am using GTX-1080Ti so using ```-arch=sm_61```, choose the parameter depending on your GPU.
+
+### Changes made to the original Repo
+
+1. Update from python2 to python3
+
+2. Update make script to build cython modules with Tensorflow 1.4.1
+
+3. Update test module to compatible with ckpt v2 format model
 
 ### Requirements: software
 
@@ -115,9 +128,39 @@ The demo performs detection using a VGG16 network trained for detection on PASCA
 | tvmonitor   | 0.666 |
 | mAP        | 0.681 |
 
+My Result with 200000 iters:
+
+| Classes     | AP    |
+|-------------|-------|
+| aeroplane   | 0.692 |
+| bicycle     | 0.778 |
+| bird        | 0.646 |
+| boat        | 0.595 |
+| bottle      | 0.535 |
+| bus         | 0.804 |
+| car         | 0.799 |
+| cat         | 0.797 |
+| chair       | 0.507 |
+| cow         | 0.732 |
+| diningtable | 0.632 |
+| dog         | 0.763 |
+| horse       | 0.805 |
+| motorbike   | 0.775 |
+| person      | 0.770 |
+| pottedplant | 0.403 |
+| sheep       | 0.664 |
+| sofa        | 0.663 |
+| train       | 0.757 |
+| tvmonitor   | 0.701 |
+| mAP         | 0.691 |
 
 ###References
 [Faster R-CNN caffe version](https://github.com/rbgirshick/py-faster-rcnn)
 
 [A tensorflow implementation of SubCNN (working progress)](https://github.com/yuxng/SubCNN_TF)
 
+### Thanks
+
+Thanks to @[lev-kusanagi](https://github.com/lev-kusanagi)'s solution on using ckpt v2 format model
+
+Thanks to @[awilliamson](https://github.com/awilliamson)'s solution on building cython modules
