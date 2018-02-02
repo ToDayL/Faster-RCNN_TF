@@ -1,3 +1,4 @@
+# Comment By Jin Li 20171224
 import numpy as np
 import tensorflow as tf
 import roi_pooling_layer.roi_pooling_op as roi_pool_op
@@ -6,18 +7,17 @@ from rpn_msr.proposal_layer_tf import proposal_layer as proposal_layer_py
 from rpn_msr.anchor_target_layer_tf import anchor_target_layer as anchor_target_layer_py
 from rpn_msr.proposal_target_layer_tf import proposal_target_layer as proposal_target_layer_py
 
-
-
 DEFAULT_PADDING = 'SAME'
+
 
 def layer(op):
     def layer_decorated(self, *args, **kwargs):
         # Automatically set a name if not provided.
         name = kwargs.setdefault('name', self.get_unique_name(op.__name__))
         # Figure out the layer inputs.
-        if len(self.inputs)==0:
+        if len(self.inputs) == 0:
             raise RuntimeError('No input variables found for layer %s.'%name)
-        elif len(self.inputs)==1:
+        elif len(self.inputs) == 1:
             layer_input = self.inputs[0]
         else:
             layer_input = list(self.inputs)
@@ -31,13 +31,16 @@ def layer(op):
         return self
     return layer_decorated
 
+# Define the Network Class
 class Network(object):
     def __init__(self, inputs, trainable=True):
+        # init members
         self.inputs = []
         self.layers = dict(inputs)
         self.trainable = trainable
         self.setup()
 
+    # Each subclass must implement the setup fuction.
     def setup(self):
         raise NotImplementedError('Must be subclassed.')
 
@@ -59,20 +62,24 @@ class Network(object):
 
                                 raise
 
+    # For a neetwork, set input data.
     def feed(self, *args):
         assert len(args) != 0
         self.inputs = []
         for layer in args:
             if isinstance(layer, str):
                 try:
+                    # Find layer in the dict
                     layer = self.layers[layer]
                     print(layer)
                 except KeyError:
                     print(self.layers.keys())
                     raise KeyError('Unknown layer name fed: %s'%layer)
+            # add input to inputs
             self.inputs.append(layer)
         return self
 
+    # get the layer from the network
     def get_output(self, layer):
         try:
             layer = self.layers[layer]
@@ -91,12 +98,13 @@ class Network(object):
     def validate_padding(self, padding):
         assert padding in ('SAME', 'VALID')
 
+    # Redifine Convolution operation
     @layer
     def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True):
         self.validate_padding(padding)
         c_i = input.get_shape().as_list()[-1]
-        assert c_i%group==0
-        assert c_o%group==0
+        assert (c_i % group) == 0
+        assert (c_o % group) == 0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
 
@@ -105,22 +113,29 @@ class Network(object):
             kernel = self.make_var('weights', [k_h, k_w, c_i/group, c_o], init_weights, trainable)
             biases = self.make_var('biases', [c_o], init_biases, trainable)
 
-            if group==1:
+            if group == 1:
                 conv = convolve(input, kernel)
             else:
-                input_groups = tf.split(3, group, input)
-                kernel_groups = tf.split(3, group, kernel)
-                output_groups = [convolve(i, k) for i,k in zip(input_groups, kernel_groups)]
-                conv = tf.concat(3, output_groups)
+                # Following code may have problem running on current version of tensorflow
+                # However, the group is never used in Faster RCNN, so...
+                # input_groups = tf.split(3, group, input)
+                # kernel_groups = tf.split(3, group, kernel)
+                # output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]                
+                input_groups = tf.split(input, group, 3)
+                kernel_groups = tf.split(kernel, group, 3)
+                output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
+                conv = tf.concat(output_groups, 3)
             if relu:
                 bias = tf.nn.bias_add(conv, biases)
                 return tf.nn.relu(bias, name=scope.name)
             return tf.nn.bias_add(conv, biases, name=scope.name)
 
+    # Redifine Relu operation
     @layer
     def relu(self, input, name):
         return tf.nn.relu(input, name=name)
 
+    # Redifine Max Pooling operation
     @layer
     def max_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
         self.validate_padding(padding)
@@ -129,7 +144,8 @@ class Network(object):
                               strides=[1, s_h, s_w, 1],
                               padding=padding,
                               name=name)
-
+    
+    # Redifine avg Pooling operation, no use in Faster RCNN
     @layer
     def avg_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
         self.validate_padding(padding)
@@ -139,6 +155,7 @@ class Network(object):
                               padding=padding,
                               name=name)
 
+    # ROI Pooling Interface
     @layer
     def roi_pool(self, input, pooled_height, pooled_width, spatial_scale, name):
         # only use the first input
@@ -148,6 +165,7 @@ class Network(object):
         if isinstance(input[1], tuple):
             input[1] = input[1][0]
 
+        # Input[0] is the Feature map and Input[1] is the ROI data
         print(input)
         return roi_pool_op.roi_pool(input[0], input[1],
                                     pooled_height,
@@ -206,24 +224,62 @@ class Network(object):
   
             return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
 
-
+    # Reshape the layer
     @layer
-    def reshape_layer(self, input, d,name):
+    def reshape_layer(self, input, d, name):
+        # input_shape[0]: The batch size
+        # input_shape[1]: The height of feature map
+        # input_shape[2]: The width of feature map
+        # input_shape[3]: The feature dimention
+        # For example: the original layersize is rs = [?, h, w, fd]
+        # fd is 2*9
+        # then call this function:
+        # reshape_layer(2,rs)
+        # Then the output is: [?, h*9, w, 2]
+        # The rpn_cls_prob_reshape map low dimension feature to
+        # high dimention when other module map high dimension
+        # feature to low dimention. So treat them differently.
         input_shape = tf.shape(input)
         if name == 'rpn_cls_prob_reshape':
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)/tf.cast(d,tf.float32)*tf.cast(input_shape[3],tf.float32),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+            return tf.transpose(
+                tf.reshape(
+                    tf.transpose(input, [0, 3, 1, 2]),
+                    [input_shape[0],
+                     int(d),
+                     tf.cast(
+                        tf.cast(input_shape[1], tf.float32) /
+                        tf.cast(d, tf.float32) *
+                        tf.cast(input_shape[3], tf.float32),
+                        tf.int32),
+                     input_shape[2]]),
+                    [0, 2, 3, 1],
+                name=name)
         else:
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)*(tf.cast(input_shape[3],tf.float32)/tf.cast(d,tf.float32)),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+            return tf.transpose(
+                tf.reshape(
+                    tf.transpose(input, [0, 3, 1, 2]),
+                    [input_shape[0],
+                     int(d),
+                     tf.cast(
+                        tf.cast(input_shape[1], tf.float32) *
+                        (tf.cast(input_shape[3], tf.float32) /
+                         tf.cast(d, tf.float32)),
+                        tf.int32),
+                     input_shape[2]]),
+                    [0, 2, 3, 1],
+                name=name)
 
-    @layer
-    def feature_extrapolating(self, input, scales_base, num_scale_base, num_per_octave, name):
-        return feature_extrapolating_op.feature_extrapolating(input,
-                              scales_base,
-                              num_scale_base,
-                              num_per_octave,
-                              name=name)
+    # Pylint suggests that the feature_extrapolating_op is not import?
+    # @layer
+    # def feature_extrapolating(self, input, scales_base, num_scale_base,
+    #                           num_per_octave, name):
+    #     return feature_extrapolating_op.feature_extrapolating(
+    #         input,
+    #         scales_base,
+    #         num_scale_base,
+    #         num_per_octave,
+    #         name=name
+    #     )
 
     @layer
     def lrn(self, input, radius, alpha, beta, name, bias=1.0):
@@ -250,32 +306,47 @@ class Network(object):
                 dim = 1
                 for d in input_shape[1:].as_list():
                     dim *= d
-                feed_in = tf.reshape(tf.transpose(input,[0,3,1,2]), [-1, dim])
+                feed_in = tf.reshape(tf.transpose(input, [0, 3, 1, 2]),
+                                     [-1, dim])
             else:
                 feed_in, dim = (input, int(input_shape[-1]))
 
             if name == 'bbox_pred':
-                init_weights = tf.truncated_normal_initializer(0.0, stddev=0.001)
+                init_weights = tf.truncated_normal_initializer(0.0,
+                                                               stddev=0.001)
                 init_biases = tf.constant_initializer(0.0)
             else:
-                init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
+                init_weights = tf.truncated_normal_initializer(0.0,
+                                                               stddev=0.01)
                 init_biases = tf.constant_initializer(0.0)
 
-            weights = self.make_var('weights', [dim, num_out], init_weights, trainable)
+            weights = self.make_var('weights',
+                                    [dim, num_out],
+                                    init_weights,
+                                    trainable)
             biases = self.make_var('biases', [num_out], init_biases, trainable)
 
             op = tf.nn.relu_layer if relu else tf.nn.xw_plus_b
             fc = op(feed_in, weights, biases, name=scope.name)
             return fc
 
+    # Redefine softmax layer
     @layer
     def softmax(self, input, name):
         input_shape = tf.shape(input)
+        # rps network is not organized in one dimension, reshape it first.
         if name == 'rpn_cls_prob':
-            return tf.reshape(tf.nn.softmax(tf.reshape(input,[-1,input_shape[3]])),[-1,input_shape[1],input_shape[2],input_shape[3]],name=name)
+            return tf.reshape(
+                tf.nn.softmax(tf.reshape(input, [-1, input_shape[3]])),
+                [-1,
+                 input_shape[1],
+                 input_shape[2],
+                 input_shape[3]],
+                name=name)
         else:
-            return tf.nn.softmax(input,name=name)
+            return tf.nn.softmax(input, name=name)
 
+    # Redefine dropout layer.
     @layer
     def dropout(self, input, keep_prob, name):
         return tf.nn.dropout(input, keep_prob, name=name)

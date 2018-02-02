@@ -48,6 +48,7 @@ REGISTER_OP("RoiPoolGrad")
     .Input("grad: T")
     .Output("output: T");
 
+// CPU ROI Pooling OP
 template <typename Device, typename T>
 class RoiPoolOp : public OpKernel {
  public:
@@ -128,15 +129,23 @@ class RoiPoolOp : public OpKernel {
       {
         // (n, ph, pw, c) is an element in the pooled output
         int n = b;
+        // which channel is been calculating
         int c = n % num_channels;
         n /= num_channels;
+        // which col is been calculating
         int pw = n % pooled_width;
         n /= pooled_width;
+        // which row is been calculating
         int ph = n % pooled_height;
+        // which roi is been calculating
         n /= pooled_height;
 
+        // Pointing to the roi in calulating
         const float* bottom_rois = bottom_rois_flat.data() + n * 5;
+
+        // Which image the roi comes from
         int roi_batch_ind = bottom_rois[0];
+        // The roi area in the bottom layer
         int roi_start_w = round(bottom_rois[1] * spatial_scale);
         int roi_start_h = round(bottom_rois[2] * spatial_scale);
         int roi_end_w = round(bottom_rois[3] * spatial_scale);
@@ -145,11 +154,14 @@ class RoiPoolOp : public OpKernel {
         // Force malformed ROIs to be 1x1
         int roi_width = std::max(roi_end_w - roi_start_w + 1, 1);
         int roi_height = std::max(roi_end_h - roi_start_h + 1, 1);
+        // To calculate the new feature, the size of bin in use
         const T bin_size_h = static_cast<T>(roi_height)
                            / static_cast<T>(pooled_height);
         const T bin_size_w = static_cast<T>(roi_width)
                            / static_cast<T>(pooled_width);
 
+        // Among the ROI area in feature map, which part we should take
+        // to calculate the output
         int hstart = static_cast<int>(floor(ph * bin_size_h));
         int wstart = static_cast<int>(floor(pw * bin_size_w));
         int hend = static_cast<int>(ceil((ph + 1) * bin_size_h));
@@ -166,6 +178,7 @@ class RoiPoolOp : public OpKernel {
         float maxval = is_empty ? 0 : -FLT_MAX;
         // If nothing is pooled, argmax = -1 causes nothing to be backprop'd
         int maxidx = -1;
+        // Among the area calculated before, get local maximal and the index
         const float* bottom_data = bottom_data_flat.data() + roi_batch_ind * num_channels * data_height * data_width;
         for (int h = hstart; h < hend; ++h) {
           for (int w = wstart; w < wend; ++w) {
@@ -385,13 +398,15 @@ class RoiPoolGradOp : public OpKernel {
         // Accumulate gradient over all ROIs that pooled this element
         for (int roi_n = 0; roi_n < num_rois; ++roi_n)
         {
+          // Point to the roi waiting calculation
           const float* offset_bottom_rois = bottom_rois_flat.data() + roi_n * 5;
           int roi_batch_ind = offset_bottom_rois[0];
           // Skip if ROI's batch index doesn't match n
           if (n != roi_batch_ind) {
             continue;
           }
-
+          
+          // get roi in feature map
           int roi_start_w = round(offset_bottom_rois[1] * spatial_scale);
           int roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
           int roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
@@ -403,8 +418,9 @@ class RoiPoolGradOp : public OpKernel {
           if (!in_roi) {
             continue;
           }
-
+          
           int offset = roi_n * pooled_height * pooled_width * num_channels;
+          // Point to the specific ROI of pooled data
           const float* offset_top_diff = out_backprop_flat.data() + offset;
           const int* offset_argmax_data = argmax_data_flat.data() + offset;
 
@@ -420,6 +436,7 @@ class RoiPoolGradOp : public OpKernel {
           const T bin_size_w = static_cast<T>(roi_width)
                              / static_cast<T>(pooled_width);
 
+          // Find Potential points calculated by this point
           int phstart = floor(static_cast<int>(h - roi_start_h) / bin_size_h);
           int phend = ceil(static_cast<int>(h - roi_start_h + 1) / bin_size_h);
           int pwstart = floor(static_cast<int>(w - roi_start_w) / bin_size_w);
@@ -429,7 +446,8 @@ class RoiPoolGradOp : public OpKernel {
           phend = std::min(std::max(phend, 0), pooled_height);
           pwstart = std::min(std::max(pwstart, 0), pooled_width);
           pwend = std::min(std::max(pwend, 0), pooled_width);
-
+          
+          // If the output is activated by this point, accumulate the gradient
           for (int ph = phstart; ph < phend; ++ph) {
             for (int pw = pwstart; pw < pwend; ++pw) {
               if (offset_argmax_data[(ph * pooled_width + pw) * num_channels + c] == (h * data_width + w) * num_channels + c)

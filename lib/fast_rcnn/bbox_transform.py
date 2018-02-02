@@ -8,16 +8,26 @@
 import numpy as np
 
 def bbox_transform(ex_rois, gt_rois):
+    # The output is not defined as actual position of the roi
+    # The NN generates the relation ship of output and the anchor
+
+    # 1: Get the center and the width and height of Extracted ROI
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
     ex_ctr_x = ex_rois[:, 0] + 0.5 * ex_widths
     ex_ctr_y = ex_rois[:, 1] + 0.5 * ex_heights
 
+    # 2: Get the Groundtruth Position
     gt_widths = gt_rois[:, 2] - gt_rois[:, 0] + 1.0
     gt_heights = gt_rois[:, 3] - gt_rois[:, 1] + 1.0
     gt_ctr_x = gt_rois[:, 0] + 0.5 * gt_widths
     gt_ctr_y = gt_rois[:, 1] + 0.5 * gt_heights
 
+    # 3: get the relationship
+    # t.x = (g.x - r.x)/r.width
+    # t.y = (g.y - r.y)/r.width
+    # t.width = log(g.width / r.width)
+    # t.height = log(g.height / r.height)
     targets_dx = (gt_ctr_x - ex_ctr_x) / ex_widths
     targets_dy = (gt_ctr_y - ex_ctr_y) / ex_heights
     targets_dw = np.log(gt_widths / ex_widths)

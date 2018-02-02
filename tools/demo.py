@@ -6,7 +6,9 @@ from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, cv2
+import os
+import sys
+import cv2
 import argparse
 from networks.factory import get_network
 
@@ -64,7 +66,8 @@ def demo(sess, net, image_name):
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
-    print('Detection took {:.3f}s for {:d} object proposals'.format(timer.total_time, boxes.shape[0]))
+    print('Detection took {:.3f}s for {:d} object proposals'.format(
+        timer.total_time, boxes.shape[0]))
 
     # Visualize detections for each class
     im = im[:, :, (2, 1, 0)]
@@ -74,7 +77,7 @@ def demo(sess, net, image_name):
     CONF_THRESH = 0.8
     NMS_THRESH = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
-        cls_ind += 1 # because we skipped background
+        cls_ind += 1  # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
         cls_scores = scores[:, cls_ind]
         dets = np.hstack((cls_boxes,
@@ -82,6 +85,7 @@ def demo(sess, net, image_name):
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
         vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
+
 
 def parse_args():
     """Parse input arguments."""
@@ -111,8 +115,8 @@ if __name__ == '__main__':
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
     net = get_network(args.demo_net)
-    # load model
-    saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
+    # load model in V
+    saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
     saver.restore(sess, args.model)
 
     # sess.run(tf.initialize_all_variables())

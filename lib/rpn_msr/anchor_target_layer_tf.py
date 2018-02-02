@@ -22,6 +22,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
+    # Create default anchors
     _anchors = generate_anchors.generate_anchors(scales=np.array(anchor_scales))
     _num_anchors = _anchors.shape[0]
 
@@ -71,6 +72,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         print('rpn: gt_boxes', gt_boxes)
 
     # 1. Generate proposals from bbox deltas and shifted anchors
+    # When you down sampled 16x, the step should be 16
+    # using shifts,all K*A anchors are generated at the same time.
     shift_x = np.arange(0, width) * _feat_stride
     shift_y = np.arange(0, height) * _feat_stride
     shift_x, shift_y = np.meshgrid(shift_x, shift_y)
@@ -113,8 +116,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     overlaps = bbox_overlaps(
         np.ascontiguousarray(anchors, dtype=np.float),
         np.ascontiguousarray(gt_boxes, dtype=np.float))
+    # For each achor, the largest overlap and its index
     argmax_overlaps = overlaps.argmax(axis=1)
     max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
+
+    # For each ground-truth, the best candidate anchor
     gt_argmax_overlaps = overlaps.argmax(axis=0)
     gt_max_overlaps = overlaps[gt_argmax_overlaps,
                                np.arange(overlaps.shape[1])]
@@ -152,6 +158,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         #print "was %s inds, disabling %s, now %s inds" % (
             #len(bg_inds), len(disable_inds), np.sum(labels == 0))
 
+    # Calculate the proximity of anchor and its best match of ground truth 
     bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
     bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
 
@@ -186,6 +193,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         print(stds)
 
     # map up to original set of anchors
+    # Put calculation result in original size
     labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
     bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
     bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0)

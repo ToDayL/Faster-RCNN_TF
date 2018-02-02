@@ -1,3 +1,4 @@
+# Comment By Li Jin 20171225
 # --------------------------------------------------------
 # Faster R-CNN
 # Copyright (c) 2015 Microsoft
@@ -65,7 +66,8 @@ def proposal_target_layer(rpn_rois, gt_boxes, _num_classes):
 
     bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
 
-    return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
+    return rois, labels, bbox_targets, bbox_inside_weights, \
+        bbox_outside_weights
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
