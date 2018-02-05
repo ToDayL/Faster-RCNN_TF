@@ -62,7 +62,7 @@ class Network(object):
 
                                 raise
 
-    # For a neetwork, set input data.
+    # For a neetwork, set input data. Also called for each layer.
     def feed(self, *args):
         assert len(args) != 0
         self.inputs = []

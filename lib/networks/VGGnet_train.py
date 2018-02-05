@@ -1,3 +1,4 @@
+# Comment By Li Jin 20180204
 import tensorflow as tf
 from networks.network import Network
 
@@ -33,6 +34,8 @@ class VGGnet_train(Network):
             self.bbox_bias_assign = biases.assign(self.bbox_biases)
 
     def setup(self):
+        # VGG16 Basic Convution Network used to extract
+        # CNN features from conv5_3
         (self.feed('data')
          .conv(3, 3, 64, 1, 1, name='conv1_1', trainable=False)
          .conv(3, 3, 64, 1, 1, name='conv1_2', trainable=False)
@@ -53,6 +56,7 @@ class VGGnet_train(Network):
          .conv(3, 3, 512, 1, 1, name='conv5_3'))
 
         # ========= RPN ============
+        # RPN Classification Network
         (self.feed('conv5_3')
          .conv(3, 3, 512, 1, 1, name='rpn_conv/3x3')
          .conv(1, 1, len(anchor_scales)*3*2, 1, 1, padding='VALID',
@@ -63,7 +67,9 @@ class VGGnet_train(Network):
                               name='rpn-data'))
 
         # Loss of rpn_cls & rpn_boxes
-
+        # Region proposal bounding box regression
+        # As talked before, k=9 anchors are generated
+        # Each anchor has 4 parameter: x, y, width, height
         (self.feed('rpn_conv/3x3')
          .conv(1, 1, len(anchor_scales)*3*4, 1, 1, padding='VALID',
                relu=False, name='rpn_bbox_pred'))
